@@ -1,6 +1,6 @@
 const TABS = [
-  { status: "need", title: "Need", add: "Add something you need" },
-  { status: "have", title: "Have", add: "Add something you have" },
+  { status: "need", title: "Shopping List", add: "Add something you need" },
+  { status: "have", title: "Inventory", add: "Add something you have" },
 ];
 
 const UNSORTED = { need: "Anywhere", have: "To sort" };
@@ -129,7 +129,7 @@ class AreaStuffPanel extends HTMLElement {
 
   _row(item) {
     const qty = item.quantity > 1 ? ` <span class="muted">×${item.quantity}</span>` : "";
-    const chip = this._query ? `<span class="chip">${item.status === "need" ? "Need" : "Have"}</span>` : "";
+    const chip = this._query ? `<span class="chip">${item.status === "need" ? "Shopping List" : "Inventory"}</span>` : "";
     const thumb = item.image ? `<img class="thumb" src="${escape(item.image)}" alt="" loading="lazy">` : "";
     const primary = item.status === "need"
       ? `<button class="quiet" data-act="got" data-id="${item.id}">Got it</button>`

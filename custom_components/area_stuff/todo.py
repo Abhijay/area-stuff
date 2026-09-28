@@ -16,7 +16,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
 
 class ShoppingList(TodoListEntity):
-    """Items still needed. Completing one moves it to Have in the same area."""
+    """Items still needed. Completing one moves it to Inventory in the same area."""
 
     _attr_name = "Area Stuff Shopping"
     _attr_icon = "mdi:cart-outline"

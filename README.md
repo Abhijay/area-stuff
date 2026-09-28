@@ -13,7 +13,7 @@ later you can search for it and see which area it is in.
 
 ## What it does
 
-- Adds a **Stuff** panel to the sidebar with **Need** and **Have** tabs. Items
+- Adds a **Stuff** panel to the sidebar with **Shopping List** and **Inventory** tabs. Items
   are grouped by area, areas by floor (lowest level first), using your real
   areas and floors, so renaming or adding an area shows up straight away.
 - A search box across both tabs answers "where's the drill?". It matches every
@@ -24,7 +24,7 @@ later you can search for it and see which area it is in.
   things you have but haven't put away yet.
 - Creates `todo.area_stuff_shopping` with everything you need, so the companion
   app, voice assistants and the built-in to-do card keep working. Items added
-  there have no area until you give them one; completing one moves it to Have.
+  there have no area until you give them one; completing one moves it to Inventory.
 - Adds an `area_stuff.add_item` action, so automations can add things. For
   example, record each delivered package as something you have, to sort into
   an area once it's unpacked:
