@@ -234,8 +234,9 @@ class AreaStuffPanel extends HTMLElement {
       const form = e.target;
       const name = form.name.value.trim();
       if (!name) return;
-      if (this._area === "all") this._lastArea = form.area.value || null;
-      await this._run({ type: "area_stuff/add", name, status: this._status, area_id: this._lastArea });
+      const areaId = form.area.value || null;
+      if (this._area === "all") this._lastArea = areaId;
+      await this._run({ type: "area_stuff/add", name, status: this._status, area_id: areaId });
       root.querySelector("form.add input[name=name]")?.focus();
     });
     root.querySelectorAll("select[data-act=move]").forEach((s) => s.addEventListener("change", () => this._run({ type: "area_stuff/update", item_id: s.dataset.id, area_id: s.value || null })));
