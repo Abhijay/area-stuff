@@ -90,3 +90,20 @@ async def test_unknown_area_is_a_validation_error(hass, setup):
 
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call(DOMAIN, "add_item", {"name": "Rug", "area": "Attic"}, blocking=True)
+
+
+async def test_sections_filter_to_one_area_and_count_every_area(hass, setup, hass_ws_client):
+    office = setup
+    ar.async_get(hass).async_create("Garage")
+    client = await hass_ws_client(hass)
+    for name, area_id in (("Desk", office.id), ("Tape", None)):
+        await client.send_json_auto_id({"type": f"{DOMAIN}/add", "name": name, "area_id": area_id})
+        await client.receive_json()
+
+    await client.send_json_auto_id({"type": f"{DOMAIN}/sections", "status": "need", "area": office.id})
+    result = (await client.receive_json())["result"]
+    assert [(s["name"], [i["name"] for i in s["items"]]) for s in result["sections"]] == [("Office", ["Desk"])]
+    assert result["counts"] == {"need": 1, "have": 0}
+    nav = result["nav"]
+    assert nav["all"] == {"need": 2, "have": 0} and nav["none"] == {"need": 1, "have": 0}
+    assert [(a["name"], a["need"]) for group in nav["floors"] for a in group["areas"]] == [("Office", 1), ("Garage", 0)]

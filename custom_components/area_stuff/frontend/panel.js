@@ -3,13 +3,26 @@ const TABS = [
   { status: "have", title: "Have", add: "Add something you have" },
 ];
 
+const UNSORTED = { need: "Anywhere", have: "To sort" };
+
 const escape = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 
 const STYLE = `
-  :host { display: block; padding: 16px; max-width: 900px; margin: 0 auto; color: var(--primary-text-color); box-sizing: border-box; }
-  .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-  .toolbar h1 { font-size: 20px; font-weight: 400; margin: 0; flex: 1; }
-  .toolbar ha-menu-button { margin: -8px 0 -8px -8px; }
+  :host { display: grid; grid-template-columns: 240px minmax(0, 1fr); height: 100vh; color: var(--primary-text-color); background: var(--primary-background-color); }
+  nav { overflow-y: auto; border-right: 1px solid var(--divider-color); background: var(--card-background-color); padding: 8px 0 16px; box-sizing: border-box; }
+  nav .brand { display: flex; align-items: center; gap: 4px; font-size: 20px; padding: 8px 16px 12px; }
+  nav .brand ha-menu-button { margin: -8px 0 -8px -12px; }
+  nav h3 { margin: 16px 16px 4px; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--secondary-text-color); }
+  nav a { display: flex; align-items: center; gap: 8px; margin: 1px 8px; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 14px; color: inherit; text-decoration: none; }
+  nav a:hover { background: var(--secondary-background-color); }
+  nav a.active { background: rgba(var(--rgb-primary-color), 0.15); color: var(--primary-color); font-weight: 500; }
+  nav a .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  nav a .count { font-size: 12px; color: var(--secondary-text-color); }
+  nav a.empty .label { color: var(--secondary-text-color); }
+  main { overflow-y: auto; padding: 16px 24px; box-sizing: border-box; }
+  .content { max-width: 800px; margin: 0 auto; }
+  .toolbar { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .toolbar h1 { font-size: 22px; font-weight: 400; margin: 0; flex: 1; }
   input, select { font: inherit; color: var(--primary-text-color); background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 8px; padding: 8px 10px; min-width: 0; }
   .search { width: 100%; box-sizing: border-box; margin-bottom: 12px; font-size: 16px; }
   .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -25,7 +38,7 @@ const STYLE = `
   .card h2 .muted { font-weight: 400; }
   .muted { color: var(--secondary-text-color); font-size: 13px; }
   .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--divider-color); }
-  .card h2 + .row { border-top: 0; }
+  .card > .row:first-child, .card h2 + .row { border-top: 0; }
   .thumb { flex: none; width: 40px; height: 40px; border-radius: 6px; object-fit: contain; background: #fff; }
   .body { flex: 1; min-width: 0; cursor: pointer; }
   .name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
@@ -36,6 +49,12 @@ const STYLE = `
   .edit .actions { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
   .empty { text-align: center; padding: 32px 0; }
   .error { color: var(--error-color); margin-bottom: 12px; }
+  :host([narrow]) { display: block; height: auto; }
+  :host([narrow]) nav { display: flex; align-items: center; gap: 4px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--divider-color); padding: 4px 8px; position: sticky; top: 0; z-index: 1; }
+  :host([narrow]) nav .brand { padding: 0 8px 0 0; font-size: 0; }
+  :host([narrow]) nav h3 { display: none; }
+  :host([narrow]) nav a { flex: none; margin: 0; padding: 6px 10px; }
+  :host([narrow]) main { overflow: visible; padding: 12px 16px; }
   @media (max-width: 520px) { .row { flex-wrap: wrap; } .row select { max-width: none; flex: 1; } }
 `;
 
@@ -45,6 +64,7 @@ class AreaStuffPanel extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._status = "need";
     this._query = "";
+    this._area = "all";
     this._editing = null;
     this._confirming = null;
     this._data = null;
@@ -58,6 +78,7 @@ class AreaStuffPanel extends HTMLElement {
 
   set narrow(value) {
     this._narrow = value;
+    this.toggleAttribute("narrow", Boolean(value));
     if (this._data) this._render();
   }
 
@@ -83,7 +104,7 @@ class AreaStuffPanel extends HTMLElement {
 
   async _load() {
     try {
-      this._data = await this._send({ type: "area_stuff/sections", status: this._query ? null : this._status, query: this._query });
+      this._data = await this._send({ type: "area_stuff/sections", status: this._query ? null : this._status, query: this._query, area: this._query ? "all" : this._area });
       this._error = null;
     } catch (err) {
       this._error = err.message || String(err);
@@ -130,29 +151,56 @@ class AreaStuffPanel extends HTMLElement {
     </div>`;
   }
 
+  _areaTitle() {
+    if (this._query) return "Search";
+    if (this._area === "all") return "All stuff";
+    if (this._area === "none") return UNSORTED[this._status];
+    return this._data?.areas.find((a) => a.id === this._area)?.name ?? "";
+  }
+
+  _navLink(area, label, counts) {
+    const count = counts?.[this._status] || 0;
+    const active = !this._query && this._area === area;
+    return `<a class="${active ? "active" : ""} ${count ? "" : "empty"}" data-area="${escape(area)}"><span class="label">${escape(label)}</span>${count ? `<span class="count">${count}</span>` : ""}</a>`;
+  }
+
+  _nav() {
+    const nav = this._data?.nav;
+    if (!nav) return "";
+    const floors = nav.floors.map((f) => (f.name ? `<h3>${escape(f.name)}</h3>` : nav.floors.length > 1 ? "<h3>Other areas</h3>" : "")
+      + f.areas.map((a) => this._navLink(a.id, a.name, a)).join("")).join("");
+    return this._navLink("all", "All stuff", nav.all) + this._navLink("none", UNSORTED[this._status], nav.none) + floors;
+  }
+
   _render() {
     const data = this._data;
     const tab = TABS.find((t) => t.status === this._status);
     const focused = this.shadowRoot.activeElement;
     const keep = focused?.classList.contains("search") ? [focused.selectionStart, focused.selectionEnd] : null;
     const sections = data?.sections || [];
+    const single = !this._query && this._area !== "all";
+    const card = (s) => `<div class="card">${single ? "" : `<h2>${escape(s.name)}${s.floor ? `<span class="muted">${escape(s.floor)}</span>` : ""}</h2>`}${s.items.map((i) => this._row(i)).join("")}</div>`;
     const body = sections.length
-      ? sections.map((s) => `<div class="card"><h2>${escape(s.name)}${s.floor ? `<span class="muted">${escape(s.floor)}</span>` : ""}</h2>${s.items.map((i) => this._row(i)).join("")}</div>`).join("")
+      ? sections.map(card).join("")
       : `<div class="muted empty">${this._query ? "Nothing matches." : this._status === "need" ? "Nothing on the list." : "Nothing recorded yet."}</div>`;
     const tabs = TABS.map((t) => `<button class="${!this._query && t.status === this._status ? "active" : ""}" data-tab="${t.status}">${t.title}${data ? ` · ${data.counts[t.status]}` : ""}</button>`).join("");
+    const addArea = single ? (this._area === "none" ? null : this._area) : this._lastArea;
     this.shadowRoot.innerHTML = `<style>${STYLE}</style>
-      <div class="toolbar"><h1>Stuff</h1></div>
-      <input class="search" type="search" placeholder="Where's my…" value="${escape(this._query)}" aria-label="Search">
-      <div class="tabs">${tabs}</div>
-      ${this._error ? `<div class="error">${escape(this._error)}</div>` : ""}
-      ${this._query ? "" : `<form class="add"><input name="name" placeholder="${escape(tab.add)}" aria-label="${escape(tab.add)}" autocomplete="off"><select name="area" aria-label="Area">${this._areaOptions(this._lastArea, "No area")}</select><button type="submit">Add</button></form>`}
-      ${body}`;
+      <nav><div class="brand">Stuff</div>${this._nav()}</nav>
+      <main><div class="content">
+        <div class="toolbar"><h1>${escape(this._areaTitle())}</h1></div>
+        <input class="search" type="search" placeholder="Where's my…" value="${escape(this._query)}" aria-label="Search">
+        <div class="tabs">${tabs}</div>
+        ${this._error ? `<div class="error">${escape(this._error)}</div>` : ""}
+        ${this._query ? "" : `<form class="add"><input name="name" placeholder="${escape(tab.add)}" aria-label="${escape(tab.add)}" autocomplete="off"><select name="area" aria-label="Area">${this._areaOptions(addArea, "No area")}</select><button type="submit">Add</button></form>`}
+        ${body}
+      </div></main>`;
     // Custom panels get no app header, so phones need HA's own sidebar toggle.
     if (this._narrow) {
       const menu = document.createElement("ha-menu-button");
       menu.hass = this._hass;
       menu.narrow = true;
-      this.shadowRoot.querySelector(".toolbar").prepend(menu);
+      this.shadowRoot.querySelector(".brand").prepend(menu);
     }
     if (keep) {
       const search = this.shadowRoot.querySelector(".search");
@@ -175,12 +223,18 @@ class AreaStuffPanel extends HTMLElement {
       this._editing = null;
       this._load();
     }));
+    root.querySelectorAll("[data-area]").forEach((a) => a.addEventListener("click", () => {
+      this._area = a.dataset.area;
+      this._query = "";
+      this._editing = null;
+      this._load();
+    }));
     root.querySelector("form.add")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const form = e.target;
       const name = form.name.value.trim();
       if (!name) return;
-      this._lastArea = form.area.value || null;
+      if (this._area === "all") this._lastArea = form.area.value || null;
       await this._run({ type: "area_stuff/add", name, status: this._status, area_id: this._lastArea });
       root.querySelector("form.add input[name=name]")?.focus();
     });

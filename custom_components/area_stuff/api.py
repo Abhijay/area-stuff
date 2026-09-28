@@ -13,7 +13,7 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, SERVICE_ADD_ITEM
 from .store import StuffStore
-from .stuff import STATUSES, sections
+from .stuff import STATUSES, in_area, navigation, sections
 
 FIELDS = {
     vol.Optional("status"): vol.In(STATUSES),
@@ -53,15 +53,19 @@ def _loaded(handler):
     return wrapper
 
 
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/sections", vol.Optional("status"): vol.Any(None, vol.In(STATUSES)), vol.Optional("query", default=""): str})
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/sections", vol.Optional("status"): vol.Any(None, vol.In(STATUSES)), vol.Optional("query", default=""): str, vol.Optional("area", default="all"): str})
 @websocket_api.async_response
 @_loaded
 async def ws_sections(hass, connection, msg, store: StuffStore) -> None:
+    """``area`` is ``"all"``, ``"none"`` or an area ID; ``counts`` cover that area, ``nav`` covers every area."""
     items = list(store.items.values())
+    areas, floors = store.areas(), store.floors()
+    shown = in_area(items, msg["area"], areas)
     connection.send_result(msg["id"], {
-        "sections": sections(items, store.areas(), store.floors(), msg.get("status"), msg["query"]),
-        "counts": {status: sum(item.status == status for item in items) for status in STATUSES},
-        "areas": sorted(store.areas(), key=lambda area: area["name"].casefold()),
+        "sections": sections(shown, areas, floors, msg.get("status"), msg["query"]),
+        "counts": {status: sum(item.status == status for item in shown) for status in STATUSES},
+        "nav": navigation(items, areas, floors),
+        "areas": sorted(areas, key=lambda area: area["name"].casefold()),
     })
 
 

@@ -5,7 +5,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "custom_components" / "area_stuff"))
 
-from stuff import HAVE, NEED, Item, clean, find_area, matches, sections  # noqa: E402
+from stuff import HAVE, NEED, Item, clean, find_area, in_area, matches, navigation, sections  # noqa: E402
 
 FLOORS = [{"id": "up", "name": "Upstairs", "level": 1}, {"id": "main", "name": "Main", "level": 0}]
 AREAS = [
@@ -77,3 +77,22 @@ def test_find_area_accepts_ids_and_names():
     assert find_area("", AREAS) is None
     with pytest.raises(ValueError):
         find_area("Attic", AREAS)
+
+
+def test_navigation_lists_every_area_by_floor_with_counts():
+    items = [Item("Desk", NEED, "office"), Item("Lamp", HAVE, "office"), Item("Rug", HAVE, "gone"), Item("Tape", NEED, None)]
+    nav = navigation(items, AREAS, FLOORS)
+    assert nav["all"] == {"need": 2, "have": 2}
+    assert nav["none"] == {"need": 1, "have": 1}
+    assert [(group["name"], [(a["name"], a["need"], a["have"]) for a in group["areas"]]) for group in nav["floors"]] == [
+        ("Main", [("Kitchen", 0, 0)]),
+        ("Upstairs", [("Bedroom", 0, 0), ("Office", 1, 1)]),
+        (None, [("Garage", 0, 0)]),
+    ]
+
+
+def test_in_area_filters_all_none_and_one_area():
+    items = [Item("Desk", NEED, "office"), Item("Rug", HAVE, "gone"), Item("Tape", NEED, None)]
+    assert [i.name for i in in_area(items, "all", AREAS)] == ["Desk", "Rug", "Tape"]
+    assert [i.name for i in in_area(items, "none", AREAS)] == ["Rug", "Tape"]
+    assert [i.name for i in in_area(items, "office", AREAS)] == ["Desk"]
