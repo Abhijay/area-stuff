@@ -1,0 +1,36 @@
+add_item:
+  fields:
+    name:
+      required: true
+      example: Cordless drill
+      selector:
+        text:
+    area:
+      example: Office
+      selector:
+        area:
+    status:
+      default: need
+      selector:
+        select:
+          options:
+            - need
+            - have
+    quantity:
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 999
+          mode: box
+    note:
+      selector:
+        text:
+    image:
+      selector:
+        text:
+          type: url
+    link:
+      selector:
+        text:
+          type: url

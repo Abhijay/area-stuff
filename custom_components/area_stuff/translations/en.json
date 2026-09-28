@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Adds a Stuff panel to the sidebar and an Area Stuff Shopping to-do list."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Area Stuff is already set up."
+    }
+  },
+  "services": {
+    "add_item": {
+      "name": "Add item",
+      "description": "Add something you need, or something you have, to an area.",
+      "fields": {
+        "name": { "name": "Name", "description": "What the item is." },
+        "area": { "name": "Area", "description": "Area ID or name. Leave empty to sort it later." },
+        "status": { "name": "Status", "description": "need puts it on the shopping list; have records that you own it." },
+        "quantity": { "name": "Quantity", "description": "How many." },
+        "note": { "name": "Note", "description": "Anything that helps you find it, like which drawer." },
+        "image": { "name": "Image", "description": "Picture URL shown next to the item." },
+        "link": { "name": "Link", "description": "Where it came from, like an order page." }
+      }
+    }
+  }
+}
