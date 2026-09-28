@@ -96,3 +96,23 @@ def test_in_area_filters_all_none_and_one_area():
     assert [i.name for i in in_area(items, "all", AREAS)] == ["Desk", "Rug", "Tape"]
     assert [i.name for i in in_area(items, "none", AREAS)] == ["Rug", "Tape"]
     assert [i.name for i in in_area(items, "office", AREAS)] == ["Desk"]
+
+
+def test_clean_validates_inventory_details():
+    assert clean({
+        "manufacturer": " Makita ", "purchase_date": "2026-03-01", "warranty_expires": "", "purchase_price": "129.999",
+        "insured": 1, "tags": [" power  tools ", "", "power tools", "garage"],
+    }) == {"manufacturer": "Makita", "purchase_date": "2026-03-01", "warranty_expires": None, "purchase_price": 130.0,
+           "insured": True, "tags": ["power tools", "garage"]}
+    assert clean({"purchase_price": ""}) == {"purchase_price": None}
+    for bad in ({"purchase_date": "March"}, {"purchase_price": -1}, {"purchase_price": "lots"}):
+        with pytest.raises(ValueError):
+            clean(bad)
+
+
+def test_search_covers_serial_maker_and_tags():
+    drill = Item("Drill", HAVE, "garage", manufacturer="Makita", serial_number="SN-4471", tags=["power tools"])
+    area_names = {area["id"]: area["name"] for area in AREAS}
+    assert matches(drill, "makita", area_names)
+    assert matches(drill, "sn-4471", area_names)
+    assert matches(drill, "power garage", area_names)

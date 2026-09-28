@@ -20,6 +20,10 @@ later you can search for it and see which area it is in.
   word against the item's name, note and area.
 - Each item has a name, area, quantity, note, and an optional image and link.
   Move an item by picking a new area; click it to edit the rest.
+- Inventory items can also carry the details [Homebox](https://homebox.software)
+  tracks: manufacturer, model and serial number, where and when you bought it and
+  for how much, warranty expiry (or lifetime), whether it's insured, and tags.
+  Search matches those too.
 - Items with no area are listed first: **Anywhere** for needs, **To sort** for
   things you have but haven't put away yet.
 - Creates `todo.area_stuff_shopping` with everything you need, so the companion

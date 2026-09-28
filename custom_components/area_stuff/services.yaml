@@ -34,3 +34,39 @@ add_item:
       selector:
         text:
           type: url
+    manufacturer:
+      selector:
+        text:
+    model_number:
+      selector:
+        text:
+    serial_number:
+      selector:
+        text:
+    purchase_from:
+      example: Amazon
+      selector:
+        text:
+    purchase_date:
+      selector:
+        date:
+    purchase_price:
+      selector:
+        number:
+          min: 0
+          step: 0.01
+          mode: box
+    warranty_expires:
+      selector:
+        date:
+    lifetime_warranty:
+      selector:
+        boolean:
+    insured:
+      selector:
+        boolean:
+    tags:
+      example: '["tools", "power"]'
+      selector:
+        text:
+          multiple: true

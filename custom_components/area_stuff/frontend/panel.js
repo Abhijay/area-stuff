@@ -3,7 +3,31 @@ const TABS = [
   { status: "have", title: "Inventory", add: "Add something you have" },
 ];
 
+const DETAILS = [
+  { key: "manufacturer", label: "Manufacturer" },
+  { key: "model_number", label: "Model number" },
+  { key: "serial_number", label: "Serial number" },
+  { key: "purchase_from", label: "Purchased from" },
+  { key: "purchase_date", label: "Purchase date", type: "date" },
+  { key: "purchase_price", label: "Price", type: "number" },
+  { key: "warranty_expires", label: "Warranty expires", type: "date" },
+];
+const FLAGS = [
+  { key: "lifetime_warranty", label: "Lifetime warranty" },
+  { key: "insured", label: "Insured" },
+];
+
 const UNSORTED = { need: "Anywhere", have: "To sort" };
+
+const money = (value) => (value == null ? "" : value.toLocaleString(undefined, { style: "currency", currency: "USD" }));
+const shortDate = (iso) => new Date(`${iso}T00:00`).toLocaleDateString(undefined, { month: "short", year: "numeric" });
+
+function warranty(item) {
+  if (item.lifetime_warranty) return "Lifetime warranty";
+  if (!item.warranty_expires) return "";
+  const expired = item.warranty_expires < new Date().toISOString().slice(0, 10);
+  return `${expired ? "Warranty ended" : "Warranty until"} ${shortDate(item.warranty_expires)}`;
+}
 
 const escape = (s) => String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
 
@@ -46,6 +70,11 @@ const STYLE = `
   .row select { max-width: 140px; }
   .edit { display: grid; grid-template-columns: 1fr 72px; gap: 8px; padding: 0 0 12px; }
   .edit .wide { grid-column: 1 / -1; }
+  .edit fieldset { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; border: 1px solid var(--divider-color); border-radius: 8px; margin: 0; padding: 8px 12px 12px; }
+  .edit legend { padding: 0 4px; font-size: 13px; color: var(--secondary-text-color); }
+  .edit label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary-text-color); }
+  .edit label.check { flex-direction: row; align-items: center; gap: 8px; font-size: 14px; color: var(--primary-text-color); }
+  .tag { font-size: 11px; padding: 1px 6px; border-radius: 8px; border: 1px solid var(--divider-color); color: var(--secondary-text-color); margin-right: 4px; }
   .edit .actions { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
   .empty { text-align: center; padding: 32px 0; }
   .error { color: var(--error-color); margin-bottom: 12px; }
@@ -137,8 +166,12 @@ class AreaStuffPanel extends HTMLElement {
     const remove = this._confirming === item.id
       ? `<button class="quiet danger" data-act="delete" data-id="${item.id}">Delete?</button>`
       : `<button class="quiet" data-act="confirm" data-id="${item.id}" title="Delete">✕</button>`;
+    const meta = item.status === "have"
+      ? [[item.manufacturer, item.model_number].filter(Boolean).join(" "), money(item.purchase_price), item.purchase_from, warranty(item), item.insured ? "Insured" : ""].filter(Boolean).map(escape).join(" · ")
+      : "";
+    const tags = item.tags.length ? `<div>${item.tags.map((t) => `<span class="tag">${escape(t)}</span>`).join("")}</div>` : "";
     const row = `<div class="row">${thumb}
-      <div class="body" data-act="edit" data-id="${item.id}"><div class="name">${escape(item.name)}${qty}${chip}</div>${item.note ? `<div class="muted">${escape(item.note)}</div>` : ""}</div>
+      <div class="body" data-act="edit" data-id="${item.id}"><div class="name">${escape(item.name)}${qty}${chip}</div>${item.note ? `<div class="muted">${escape(item.note)}</div>` : ""}${meta ? `<div class="muted">${meta}</div>` : ""}${tags}</div>
       <select data-act="move" data-id="${item.id}" aria-label="Area">${this._areaOptions(item.area_id, "No area")}</select>
       ${primary}${remove}</div>`;
     if (this._editing !== item.id) return row;
@@ -147,6 +180,8 @@ class AreaStuffPanel extends HTMLElement {
       <input name="quantity" type="number" min="1" value="${item.quantity}" aria-label="Quantity">
       <input class="wide" name="note" value="${escape(item.note)}" placeholder="Note, like which drawer" aria-label="Note">
       <input class="wide" name="link" value="${escape(item.link || "")}" placeholder="Link" aria-label="Link">
+      <input class="wide" name="tags" value="${escape(item.tags.join(", "))}" placeholder="Tags, separated by commas" aria-label="Tags">
+      ${item.status === "have" ? this._details(item) : ""}
       <div class="actions">${item.link ? `<a href="${escape(item.link)}" target="_blank" rel="noopener"><button class="quiet">Open link</button></a>` : ""}<button class="quiet" data-act="cancel">Cancel</button><button data-act="save" data-id="${item.id}">Save</button></div>
     </div>`;
   }
@@ -170,6 +205,12 @@ class AreaStuffPanel extends HTMLElement {
     const floors = nav.floors.map((f) => (f.name ? `<h3>${escape(f.name)}</h3>` : nav.floors.length > 1 ? "<h3>Other areas</h3>" : "")
       + f.areas.map((a) => this._navLink(a.id, a.name, a)).join("")).join("");
     return this._navLink("all", "All stuff", nav.all) + this._navLink("none", UNSORTED[this._status], nav.none) + floors;
+  }
+
+  _details(item) {
+    const inputs = DETAILS.map((d) => `<label>${d.label}<input name="${d.key}" type="${d.type || "text"}" ${d.type === "number" ? 'min="0" step="0.01"' : ""} value="${escape(item[d.key] ?? "")}"></label>`).join("");
+    const flags = FLAGS.map((f) => `<label class="check"><input name="${f.key}" type="checkbox" ${item[f.key] ? "checked" : ""}>${f.label}</label>`).join("");
+    return `<fieldset><legend>Details</legend>${inputs}${flags}</fieldset>`;
   }
 
   _render() {
@@ -252,9 +293,15 @@ class AreaStuffPanel extends HTMLElement {
     if (act === "cancel") { this._editing = null; return this._render(); }
     if (act === "save") {
       const form = this.shadowRoot.querySelector(`[data-form="${id}"]`);
-      const value = (name) => form.querySelector(`[name=${name}]`).value;
+      const field = (name) => form.querySelector(`[name=${name}]`);
+      const value = (name) => field(name).value;
+      const changes = { name: value("name"), quantity: Number(value("quantity")) || 1, note: value("note"), link: value("link") || null, tags: value("tags").split(",") };
+      if (field("manufacturer")) {
+        for (const d of DETAILS) changes[d.key] = d.type === "number" ? (value(d.key) === "" ? null : Number(value(d.key))) : value(d.key) || null;
+        for (const f of FLAGS) changes[f.key] = field(f.key).checked;
+      }
       this._editing = null;
-      return this._run({ type: "area_stuff/update", item_id: id, name: value("name"), quantity: Number(value("quantity")) || 1, note: value("note"), link: value("link") || null });
+      return this._run({ type: "area_stuff/update", item_id: id, ...changes });
     }
   }
 }

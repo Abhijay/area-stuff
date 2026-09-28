@@ -20,7 +20,17 @@
         "quantity": { "name": "Quantity", "description": "How many." },
         "note": { "name": "Note", "description": "Anything that helps you find it, like which drawer." },
         "image": { "name": "Image", "description": "Picture URL shown next to the item." },
-        "link": { "name": "Link", "description": "Where it came from, like an order page." }
+        "link": { "name": "Link", "description": "Where it came from, like an order page." },
+        "manufacturer": { "name": "Manufacturer", "description": "Who made it." },
+        "model_number": { "name": "Model number", "description": "The maker's model number." },
+        "serial_number": { "name": "Serial number", "description": "The item's serial number." },
+        "purchase_from": { "name": "Purchased from", "description": "Where it was bought." },
+        "purchase_date": { "name": "Purchase date", "description": "When it was bought." },
+        "purchase_price": { "name": "Purchase price", "description": "What it cost." },
+        "warranty_expires": { "name": "Warranty expires", "description": "When the warranty runs out." },
+        "lifetime_warranty": { "name": "Lifetime warranty", "description": "The warranty never runs out." },
+        "insured": { "name": "Insured", "description": "Covered by your insurance." },
+        "tags": { "name": "Tags", "description": "Labels to group and search by." }
       }
     }
   }

@@ -107,3 +107,18 @@ async def test_sections_filter_to_one_area_and_count_every_area(hass, setup, has
     nav = result["nav"]
     assert nav["all"] == {"need": 2, "have": 0} and nav["none"] == {"need": 1, "have": 0}
     assert [(a["name"], a["need"]) for group in nav["floors"] for a in group["areas"]] == [("Office", 1), ("Garage", 0)]
+
+
+async def test_inventory_details_round_trip_through_the_service_and_panel(hass, setup, hass_ws_client):
+    item = await hass.services.async_call(DOMAIN, "add_item", {
+        "name": "Headphones", "status": "have", "area": "Office", "manufacturer": "Sony", "purchase_from": "Amazon",
+        "purchase_date": "2026-09-01", "purchase_price": 348, "tags": ["audio"],
+    }, blocking=True, return_response=True)
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": f"{DOMAIN}/update", "item_id": item["id"], "serial_number": "S01", "warranty_expires": "2027-09-01", "insured": True})
+    updated = (await client.receive_json())["result"]
+    assert {key: updated[key] for key in ("manufacturer", "purchase_price", "tags", "serial_number", "warranty_expires", "insured")} == {
+        "manufacturer": "Sony", "purchase_price": 348.0, "tags": ["audio"], "serial_number": "S01", "warranty_expires": "2027-09-01", "insured": True}
+
+    await client.send_json_auto_id({"type": f"{DOMAIN}/update", "item_id": item["id"], "purchase_date": "soon"})
+    assert (await client.receive_json())["error"]["code"] == "invalid_format"

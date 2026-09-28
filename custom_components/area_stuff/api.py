@@ -22,6 +22,11 @@ FIELDS = {
     vol.Optional("note"): vol.Any(None, str),
     vol.Optional("image"): vol.Any(None, str),
     vol.Optional("link"): vol.Any(None, str),
+    **{vol.Optional(key): vol.Any(None, str) for key in ("manufacturer", "model_number", "serial_number", "purchase_from", "purchase_date", "warranty_expires")},
+    vol.Optional("purchase_price"): vol.Any(None, vol.All(vol.Coerce(float), vol.Range(min=0))),
+    vol.Optional("lifetime_warranty"): bool,
+    vol.Optional("insured"): bool,
+    vol.Optional("tags"): [str],
 }
 
 

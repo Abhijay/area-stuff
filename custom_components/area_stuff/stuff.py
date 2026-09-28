@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import uuid
+from datetime import date
 from dataclasses import asdict, dataclass, field, fields
 
 NEED, HAVE = "need", "have"
 STATUSES = (NEED, HAVE)
 UNSORTED_TITLE = {NEED: "Anywhere", HAVE: "To sort"}
+TEXT_FIELDS = ("note", "manufacturer", "model_number", "serial_number", "purchase_from")
+DATE_FIELDS = ("purchase_date", "warranty_expires")
+FLAG_FIELDS = ("lifetime_warranty", "insured")
 
 
 @dataclass
@@ -19,6 +23,16 @@ class Item:
     note: str = ""
     image: str | None = None
     link: str | None = None
+    manufacturer: str = ""
+    model_number: str = ""
+    serial_number: str = ""
+    purchase_from: str = ""
+    purchase_date: str | None = None
+    purchase_price: float | None = None
+    warranty_expires: str | None = None
+    lifetime_warranty: bool = False
+    insured: bool = False
+    tags: list[str] = field(default_factory=list)
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     created: str = ""
     updated: str = ""
@@ -52,14 +66,29 @@ def clean(changes: dict) -> dict:
     for key in ("area_id", "image", "link"):
         if key in changes:
             result[key] = changes[key] or None
-    if "note" in changes:
-        result["note"] = str(changes["note"] or "").strip()
+    for key in TEXT_FIELDS:
+        if key in changes:
+            result[key] = str(changes[key] or "").strip()
+    for key in DATE_FIELDS:
+        if key in changes:
+            result[key] = date.fromisoformat(changes[key]).isoformat() if changes[key] else None
+    if "purchase_price" in changes:
+        price = changes["purchase_price"]
+        if price not in (None, "") and float(price) < 0:
+            raise ValueError("Purchase price can't be negative")
+        result["purchase_price"] = None if price in (None, "") else round(float(price), 2)
+    for key in FLAG_FIELDS:
+        if key in changes:
+            result[key] = bool(changes[key])
+    if "tags" in changes:
+        tags = [" ".join(str(tag).split()) for tag in changes["tags"] or []]
+        result["tags"] = list(dict.fromkeys(tag for tag in tags if tag))
     return result
 
 
 def matches(item: Item, query: str, area_names: dict[str, str]) -> bool:
-    """Every word of the query appears in the item's name, note or area name."""
-    text = " ".join([item.name, item.note, area_names.get(item.area_id or "", "")]).casefold()
+    """Every word of the query appears in the item's name, text fields, tags or area name."""
+    text = " ".join([item.name, *(getattr(item, key) for key in TEXT_FIELDS), *item.tags, area_names.get(item.area_id or "", "")]).casefold()
     return all(word in text for word in query.casefold().split())
 
 
