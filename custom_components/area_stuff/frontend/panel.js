@@ -18,7 +18,7 @@ const STYLE = `
   nav a.active { background: rgba(var(--rgb-primary-color), 0.15); color: var(--primary-color); font-weight: 500; }
   nav a .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   nav a .count { font-size: 12px; color: var(--secondary-text-color); }
-  nav a.empty .label { color: var(--secondary-text-color); }
+  nav a.zero .label { color: var(--secondary-text-color); }
   main { overflow-y: auto; padding: 16px 24px; box-sizing: border-box; }
   .content { max-width: 800px; margin: 0 auto; }
   .toolbar { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
@@ -161,7 +161,7 @@ class AreaStuffPanel extends HTMLElement {
   _navLink(area, label, counts) {
     const count = counts?.[this._status] || 0;
     const active = !this._query && this._area === area;
-    return `<a class="${active ? "active" : ""} ${count ? "" : "empty"}" data-area="${escape(area)}"><span class="label">${escape(label)}</span>${count ? `<span class="count">${count}</span>` : ""}</a>`;
+    return `<a class="${active ? "active" : ""} ${count ? "" : "zero"}" data-area="${escape(area)}"><span class="label">${escape(label)}</span>${count ? `<span class="count">${count}</span>` : ""}</a>`;
   }
 
   _nav() {
