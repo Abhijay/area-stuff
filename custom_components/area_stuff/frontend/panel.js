@@ -9,6 +9,7 @@ const STYLE = `
   :host { display: block; padding: 16px; max-width: 900px; margin: 0 auto; color: var(--primary-text-color); box-sizing: border-box; }
   .toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
   .toolbar h1 { font-size: 20px; font-weight: 400; margin: 0; flex: 1; }
+  .toolbar ha-menu-button { margin: -8px 0 -8px -8px; }
   input, select { font: inherit; color: var(--primary-text-color); background: var(--card-background-color); border: 1px solid var(--divider-color); border-radius: 8px; padding: 8px 10px; min-width: 0; }
   .search { width: 100%; box-sizing: border-box; margin-bottom: 12px; font-size: 16px; }
   .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -55,7 +56,10 @@ class AreaStuffPanel extends HTMLElement {
     if (first) this._start();
   }
 
-  set narrow(value) { this._narrow = value; }
+  set narrow(value) {
+    this._narrow = value;
+    if (this._data) this._render();
+  }
 
   disconnectedCallback() {
     this._unsubscribe?.then((off) => off());
@@ -143,6 +147,13 @@ class AreaStuffPanel extends HTMLElement {
       ${this._error ? `<div class="error">${escape(this._error)}</div>` : ""}
       ${this._query ? "" : `<form class="add"><input name="name" placeholder="${escape(tab.add)}" aria-label="${escape(tab.add)}" autocomplete="off"><select name="area" aria-label="Area">${this._areaOptions(this._lastArea, "No area")}</select><button type="submit">Add</button></form>`}
       ${body}`;
+    // Custom panels get no app header, so phones need HA's own sidebar toggle.
+    if (this._narrow) {
+      const menu = document.createElement("ha-menu-button");
+      menu.hass = this._hass;
+      menu.narrow = true;
+      this.shadowRoot.querySelector(".toolbar").prepend(menu);
+    }
     if (keep) {
       const search = this.shadowRoot.querySelector(".search");
       search.focus();
